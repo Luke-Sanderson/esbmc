@@ -84,6 +84,7 @@ Below is an overview of ESBMC-Python's key capabilities:
 - **Arithmetic**: Includes standard arithmetic operations (e.g., addition, subtraction, multiplication, division).
 - **Logical Operations**: Supports logical constructs (e.g., `AND`, `OR`, `NOT`).
 - **Identity Comparisons**: Supports `is` and `is not` operators for identity-based comparisons, including `x is None`, `x is y`, or `x is not None`.
+- **Global Variables:** Recognises the `global` keyword for accessing and modifying variables in the global scope from within functions.
 
 ### Functions and Methods
 - **Function Handling**: This allows for defining, calling, and verifying functions, including parameter passing and return values.
@@ -93,8 +94,8 @@ Below is an overview of ESBMC-Python's key capabilities:
 - **Inheritance**: Handles inheritance and verifies scenarios involving inheritance issues.
 ### Data Types and Structures
 - **Dynamic Typing**: Accommodates Python's dynamic typing in variable assignments.
-- **Data Structures**: Supports operations on Python's built-in data structures, such as lists and strings, including concatenation and bounds checks.
-- **Bytes and Integers**: Supports bytes and integer operations, such as conversions and bit length.
+- **Data Structures**: Supports operations on Python's built-in data structures, including lists and strings, with features such as concatenation and bounds checks.
+- **Bytes and Integers**: Supports byte and integer operations, such as conversions and bit length.
 ### Error Handling and Assertions
 - **Assertions**: Supports `assert` statements for program verification.
 - **Assumptions**: Supports `assume` statements for specifying assumptions for verification.
