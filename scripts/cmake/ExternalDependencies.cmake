@@ -12,6 +12,15 @@ FetchContent_MakeAvailable(fmt)
 FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz)
 FetchContent_MakeAvailable(json)
 
+# Thread Pool
+FetchContent_Declare(bs_thread_pool
+  GIT_REPOSITORY https://github.com/bshoshany/thread-pool.git
+  GIT_TAG v5.0.0
+)
+FetchContent_MakeAvailable(bs_thread_pool)
+add_library(bs_thread_pool_iface INTERFACE)
+target_include_directories(bs_thread_pool_iface INTERFACE ${bs_thread_pool_SOURCE_DIR}/include)
+
 if(ESBMC_CHERI_CLANG)
   FetchContent_Declare(cheri_compressed_cap
     GIT_REPOSITORY https://github.com/CTSRD-CHERI/cheri-compressed-cap.git)
