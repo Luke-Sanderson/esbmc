@@ -39,6 +39,7 @@
 #include <util/cache.h>
 #include <atomic>
 #include <goto-symex/witnesses.h>
+#include <execution>
 
 std::unordered_set<std::string> goto_functionst::reached_claims;
 std::unordered_multiset<std::string> goto_functionst::reached_mul_claims;
@@ -1446,15 +1447,9 @@ smt_convt::resultt bmct::multi_property_check(
 
     // TODO: Running everything in parallel might be a bad idea.
     //       Should we also add a thread pool?
-    std::vector<std::thread> parallel_jobs;
-    for(const auto &i : jobs)
-      parallel_jobs.push_back(std::thread(job_function, i));
 
-    // Main driver
-    for(auto &t : parallel_jobs)
-    {
-      t.join();
-    }
+    std::for_each(std::execution::par, jobs.begin(), jobs.end(), job_function);
+
     // We could remove joined jobs from the parallel_jobs vector.
     // However, its probably not worth for small vectors.
   }
