@@ -57,17 +57,24 @@ inline code_function_callt invoke_intrinsic(
 const namespacet *migrate_namespace_lookup = nullptr;
 
 static std::map<irep_idt, BigInt> bin2int_map_signed, bin2int_map_unsigned;
+static std::shared_mutex bin2int_map_signed_mutex, bin2int_map_unsigned_mutex;
 
 const BigInt &binary2bigint(irep_idt binary, bool is_signed)
 {
   std::map<irep_idt, BigInt> &ref =
     (is_signed) ? bin2int_map_signed : bin2int_map_unsigned;
+  std::shared_mutex &mutex_ref =
+    (is_signed) ? bin2int_map_signed_mutex : bin2int_map_unsigned_mutex;
 
-  std::map<irep_idt, BigInt>::iterator it = ref.find(binary);
-  if (it != ref.end())
-    return it->second;
+  {
+    std::shared_lock lock(mutex_ref);
+    std::map<irep_idt, BigInt>::iterator it = ref.find(binary);
+    if (it != ref.end())
+      return it->second;
+  }
   BigInt val = binary2integer(binary.as_string(), is_signed);
 
+  std::unique_lock lock(mutex_ref);
   std::pair<std::map<irep_idt, BigInt>::const_iterator, bool> res =
     ref.insert(std::pair<irep_idt, BigInt>(binary, val));
   return res.first->second;
