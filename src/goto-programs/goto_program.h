@@ -3,6 +3,7 @@
 
 /*! \defgroup gr_goto_programs Goto programs */
 
+#include <atomic>
 #include <cassert>
 #include <ostream>
 #include <set>
@@ -96,7 +97,7 @@ public:
     locationt location;
 
     //! what kind of instruction?
-    goto_program_instruction_typet type;
+    std::atomic<goto_program_instruction_typet> type;
 
     //! guard for gotos, assume, assert
     expr2tc guard;
@@ -148,7 +149,7 @@ public:
     //! clear the node
     inline void clear(goto_program_instruction_typet _type)
     {
-      type = _type;
+      type.store(_type);
       targets.clear();
       guard = gen_true_expr();
       code = expr2tc();
@@ -259,67 +260,67 @@ public:
 
     inline bool is_goto() const
     {
-      return type == GOTO;
+      return type.load() == GOTO;
     }
 
     inline bool is_return() const
     {
-      return type == RETURN;
+      return type.load() == RETURN;
     }
 
     inline bool is_assign() const
     {
-      return type == ASSIGN;
+      return type.load() == ASSIGN;
     }
 
     inline bool is_function_call() const
     {
-      return type == FUNCTION_CALL;
+      return type.load() == FUNCTION_CALL;
     }
 
     inline bool is_throw() const
     {
-      return type == THROW;
+      return type.load() == THROW;
     }
 
     inline bool is_catch() const
     {
-      return type == CATCH;
+      return type.load() == CATCH;
     }
 
     inline bool is_skip() const
     {
-      return type == SKIP;
+      return type.load() == SKIP;
     }
 
     inline bool is_location() const
     {
-      return type == LOCATION;
+      return type.load() == LOCATION;
     }
 
     inline bool is_other() const
     {
-      return type == OTHER;
+      return type.load() == OTHER;
     }
 
     inline bool is_decl() const
     {
-      return type == DECL;
+      return type.load() == DECL;
     }
 
     inline bool is_assume() const
     {
-      return type == ASSUME;
+      return type.load() == ASSUME;
     }
 
     inline bool is_assert() const
     {
-      return type == ASSERT;
+      return type.load() == ASSERT;
     }
 
     inline bool is_atomic_begin() const
     {
-      return type == ATOMIC_BEGIN;
+      return type.load() == ATOMIC_BEGIN;
     }
 
     inline bool is_atomic_end() const
@@ -334,26 +335,39 @@ public:
 
     inline instructiont()
       : location(static_cast<const locationt &>(get_nil_irep())),
-        type(NO_INSTRUCTION_TYPE),
         inductive_step_instruction(false),
         inductive_assertion(false),
         location_number(0),
         loop_number(unsigned(0)),
         target_number(unsigned(-1))
     {
+      type.store(NO_INSTRUCTION_TYPE);
       guard = gen_true_expr();
     }
 
     inline instructiont(goto_program_instruction_typet _type)
       : location(static_cast<const locationt &>(get_nil_irep())),
-        type(_type),
         inductive_step_instruction(false),
         inductive_assertion(false),
         location_number(0),
         loop_number(unsigned(0)),
         target_number(unsigned(-1))
     {
+      type.store(_type);
       guard = gen_true_expr();
+    }
+
+    // Copy Constructor
+    inline instructiont(const instructiont &other)
+      : code(other.code),
+        function(other.function),
+        inductive_step_instruction(other.inductive_step_instruction),
+        inductive_assertion(other.inductive_assertion),
+        location_number(other.location_number),
+        loop_number(other.loop_number),
+        target_number(other.target_number)
+    {
+      type.store(other.type.load());
     }
 
     //! swap two instructions
@@ -361,7 +375,6 @@ public:
     {
       instruction.code.swap(code);
       instruction.location.swap(location);
-      std::swap(instruction.type, type);
       instruction.guard.swap(guard);
       instruction.targets.swap(targets);
       instruction.function.swap(function);
@@ -369,6 +382,16 @@ public:
         inductive_step_instruction, instruction.inductive_step_instruction);
       std::swap(inductive_assertion, instruction.inductive_assertion);
       std::swap(instruction.loop_number, loop_number);
+
+      const auto this_old_value = this->type.exchange(instruction.type.load());
+      instruction.type.store(this_old_value);
+    }
+
+    inline instructiont& operator=(const instructiont& other)
+    {
+      instructiont temp(other);
+      swap(temp);
+      return *this;
     }
 
     //! A globally unique number to identify a program location.

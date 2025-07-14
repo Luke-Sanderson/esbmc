@@ -189,7 +189,7 @@ void goto_symext::symex_step(reachability_treet &art)
     first_loop = instruction.loop_number;
 
   // actually do instruction
-  switch (instruction.type)
+  switch (instruction.type.load())
   {
   case SKIP:
   case LOCATION:
@@ -423,7 +423,7 @@ void goto_symext::symex_step(reachability_treet &art)
   default:
     log_error(
       "GOTO instruction type {} not handled in goto_symext::symex_step",
-      fmt::underlying(instruction.type));
+      fmt::underlying(instruction.type.load()));
     abort();
   }
 }
