@@ -88,6 +88,8 @@ public:
   class instructiont
   {
   public:
+    std::shared_mutex instruction_mutex;
+
     expr2tc code;
 
     //! function this belongs to
