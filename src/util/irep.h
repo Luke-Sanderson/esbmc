@@ -6,6 +6,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <atomic>
 
 #define USE_DSTRING
 #define SHARING
@@ -1288,7 +1289,7 @@ public:
   {
   public:
 #ifdef SHARING
-    unsigned ref_count;
+    std::atomic<unsigned> ref_count;
 #endif
 
     dstring data;
@@ -1315,6 +1316,14 @@ public:
 
 #ifdef SHARING
     dt() : ref_count(1)
+    {
+    }
+    dt(const irept::dt& other) :
+        ref_count(1),
+        data(other.data),
+        named_sub(other.named_sub),
+        comments(other.comments),
+        sub(other.sub)
     {
     }
 #else
