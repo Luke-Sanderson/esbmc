@@ -132,8 +132,9 @@ expr2t::expr2t(const type2tc &_type, expr_ids id)
 }
 
 expr2t::expr2t(const expr2t &ref)
-  : expr_id(ref.expr_id), type(ref.type), crc_val(ref.crc_val)
+  : expr_id(ref.expr_id), type(ref.type)
 {
+  crc_val.store(ref.crc_val.load());
 }
 
 bool expr2t::operator==(const expr2t &ref) const
@@ -197,9 +198,11 @@ size_t expr2t::crc() const
 
 size_t expr2t::do_crc() const
 {
-  boost::hash_combine(this->crc_val, type->do_crc());
-  boost::hash_combine(this->crc_val, (uint8_t)expr_id);
-  return this->crc_val;
+  size_t current_seed = this->crc_val.load(std::memory_order_relaxed);
+  boost::hash_combine(current_seed, type->do_crc());
+  boost::hash_combine(current_seed, (uint8_t)expr_id);
+  this->crc_val.store(current_seed, std::memory_order_relaxed);
+  return current_seed;
 }
 
 void expr2t::hash(crypto_hash &hash) const

@@ -262,7 +262,7 @@ public:
   {
     detach();
     T *tmp = std::shared_ptr<T>::get();
-    tmp->crc_val = 0;
+    tmp->crc_val.store(0);
     return tmp;
   }
 
@@ -278,19 +278,27 @@ public:
 
   void detach()
   {
+    const T *current_obj = std::shared_ptr<T>::get();
+    if (!current_obj)
+      return;
+
+    std::lock_guard<std::mutex> lock(current_obj->cow_mutex);
+
     /* TODO threads: this is unsafe for multi-threaded execution
      *
      * From the docs: In multithreaded environment, the value returned by
      * use_count is approximate (typical implementations use a
-     * memory_order_relaxed load). */
-    if (this->use_count() == 1)
-      return; // No point remunging oneself if we're the only user of the ptr.
-
-    // Assign-operate ourself into containing a fresh copy of the data. This
-    // creates a new reference counted object, and assigns it to ourself,
-    // which causes the existing reference to be decremented.
-    const T *foo = std::shared_ptr<T>::get();
-    *this = foo->clone();
+     * memory_order_relaxed load).
+     *
+     * Should be safe now since under mutex */
+    // No point remunging oneself if we're the only user of the ptr.
+    if (this->use_count() > 1)
+    {
+      // Assign-operate ourself into containing a fresh copy of the data. This
+      // creates a new reference counted object, and assigns it to ourself,
+      // which causes the existing reference to be decremented.
+      *this = current_obj->clone();
+    }
   }
 
   using std::shared_ptr<T>::operator bool;
@@ -318,11 +326,16 @@ public:
   size_t crc() const
   {
     const T *foo = get();
-    {
-      std::lock_guard<std::mutex> lock(foo->crc_mutex);
-      if (foo->crc_val != 0)
-        return foo->crc_val;
-    }
+    size_t cached_val = foo->crc_val.load(std::memory_order_relaxed);
+    if (cached_val != 0)
+      return cached_val;
+
+    std::lock_guard<std::recursive_mutex> lock(foo->crc_mutex);
+
+    // Second check (inside the lock) in case another thread just finished.
+    cached_val = foo->crc_val.load(std::memory_order_relaxed);
+    if (cached_val != 0)
+      return cached_val;
 
     return foo->do_crc();
   }
@@ -608,8 +621,11 @@ public:
   // XXX XXX XXX this should be const
   type_ids type_id;
 
-  mutable size_t crc_val;
-  mutable std::mutex crc_mutex;
+  mutable std::atomic<size_t> crc_val;
+  mutable std::recursive_mutex crc_mutex;
+
+  // Mutex for copy on write detach
+  mutable std::mutex cow_mutex;
 };
 
 /** Fetch identifying name for a type.
@@ -864,8 +880,11 @@ public:
   /** Type of this expr. All exprs have a type. */
   type2tc type;
 
-  mutable size_t crc_val;
-  mutable std::mutex crc_mutex;
+  mutable std::atomic<size_t> crc_val;
+  mutable std::recursive_mutex crc_mutex;
+
+  // Mutex for copy on write detach
+  mutable std::mutex cow_mutex;
 };
 
 inline bool is_nil_expr(const expr2tc &exp)
