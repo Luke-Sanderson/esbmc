@@ -176,18 +176,18 @@ size_t
 esbmct::irep_methods2<derived, baseclass, traits, enable, fields>::do_crc()
   const
 {
-  std::lock_guard<std::mutex> lock(this->crc_mutex);
-  if (this->crc_val != 0)
-    return this->crc_val;
+  std::lock_guard<std::recursive_mutex> lock(this->crc_mutex);
+  if (this->crc_val.load() != 0)
+    return this->crc_val.load();
 
   // Starting from 0, pass a crc value through all the sub-fields of this
   // expression. Store it into crc_val.
-  assert(this->crc_val == 0);
+  assert(this->crc_val.load() == 0);
 
   do_crc_rec(); // _includes_ type_id / expr_id
 
   // Finally, combine the crc of this expr with the input , and return
-  return this->crc_val;
+  return this->crc_val.load();
 }
 
 template <
@@ -289,7 +289,11 @@ void esbmct::irep_methods2<derived, baseclass, traits, enable, fields>::
   auto m_ptr = membr_ptr::value;
 
   size_t tmp = do_type_crc(derived_this->*m_ptr);
-  boost::hash_combine(this->crc_val, tmp);
+
+  // hash_combine operates in place so copy to local variable first
+  size_t current_seed = this->crc_val.load(std::memory_order_relaxed);
+  boost::hash_combine(current_seed, tmp);
+  this->crc_val.store(current_seed, std::memory_order_relaxed);
 
   superclass::do_crc_rec();
 }

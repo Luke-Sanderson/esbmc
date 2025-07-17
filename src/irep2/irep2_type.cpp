@@ -50,9 +50,10 @@ type2t::type2t(type_ids id) : type_id(id), crc_val(0)
 {
 }
 
-type2t::type2t(const type2t &ref) : type_id(ref.type_id), crc_val(ref.crc_val)
+type2t::type2t(const type2t &ref) : type_id(ref.type_id)
 // NOTE: crc_mutex not mentioned here so fresh mutex is created.
 {
+  crc_val.store(ref.crc_val.load());
 }
 
 bool type2t::operator==(const type2t &ref) const
@@ -119,8 +120,10 @@ size_t type2t::crc() const
 
 size_t type2t::do_crc() const
 {
-  boost::hash_combine(this->crc_val, (uint8_t)type_id);
-  return this->crc_val;
+  size_t current_seed = this->crc_val.load(std::memory_order_relaxed);
+  boost::hash_combine(current_seed, (uint8_t)type_id);
+  this->crc_val.store(current_seed, std::memory_order_relaxed);
+  return current_seed;
 }
 
 void type2t::hash(crypto_hash &hash) const
