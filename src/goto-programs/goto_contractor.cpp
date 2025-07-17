@@ -270,7 +270,7 @@ void goto_contractort::insert_assume_at(
   // Copy current instruction (apart from the target number)
   // and insert it straight after the current instruction
   goto_programt::instructiont copy_instruction;
-  copy_instruction.type = instruction->type;
+  copy_instruction.type = instruction->type.load();
   copy_instruction.guard = instruction->guard;
   copy_instruction.code = instruction->code;
   copy_instruction.location = instruction->location;
@@ -278,7 +278,7 @@ void goto_contractort::insert_assume_at(
   goto_function.body.instructions.insert(
     std::next(instruction), copy_instruction);
   // Change current instruction into an ASSUME
-  instruction->type = ASSUME;
+  instruction->type.store(ASSUME);
   instruction->code = expr2tc();
   instruction->guard = cond;
   instruction->targets.clear();
