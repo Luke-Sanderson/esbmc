@@ -69,8 +69,10 @@ bmct::bmct(goto_functionst &funcs, optionst &opts, contextt &_context)
     // Run cache if user has specified the option
     if (options.get_bool_option("cache-asserts"))
       // Store the set between runs
-      algorithms.emplace_back(std::make_unique<assertion_cache>(
-        config.ssa_caching_db, !options.get_bool_option("forward-condition")));
+      algorithms.emplace_back(
+        std::make_unique<assertion_cache>(
+          config.ssa_caching_db,
+          !options.get_bool_option("forward-condition")));
 
     if (opts.get_bool_option("ssa-features-dump"))
       algorithms.emplace_back(std::make_unique<ssa_features>());
@@ -390,30 +392,23 @@ void bmct::clear_verified_claims_in_goto(
   {
     for (auto &instr : func.second.body.instructions)
     {
-      { // Shared lock scope
-        std::shared_lock lock(instr.instruction_mutex);
-        if (!instr.is_assert())
-          continue;
+      if (!instr.is_assert())
+        continue;
 
-        bool loc_match = (instr.location.as_string() == claim.claim_loc);
-        bool expr_match = false;
+      bool loc_match = (instr.location.as_string() == claim.claim_loc);
+      bool expr_match = false;
 
-        std::string guard_str = from_expr(ns, "", instr.guard);
+      std::string guard_str = from_expr(ns, "", instr.guard);
 
-        if (is_goto_cov)
-          expr_match =
-            (instr.location.comment().as_string() == claim.claim_msg);
-        else
-          expr_match = (guard_str == claim.claim_msg);
+      if (is_goto_cov)
+        expr_match = (instr.location.comment().as_string() == claim.claim_msg);
+      else
+        expr_match = (guard_str == claim.claim_msg);
 
-        // If no match we don't make_skip
-        if (!loc_match || !expr_match)
-          continue; // continue the outer loop
-
-      } // End of shared lock scope
-
-      std::unique_lock lock(instr.instruction_mutex);
-      instr.make_skip();
+      if (loc_match && expr_match)
+      {
+        instr.make_skip();
+      }
     }
   }
 }
@@ -1354,7 +1349,8 @@ smt_convt::resultt bmct::multi_property_check(
                        &bs,
                        &fc,
                        &is,
-                       &is_color](const size_t &i) {
+                       &is_color](const size_t &i)
+  {
     //"multi-fail-fast n": stop after first n SATs found.
     if (is_fail_fast && fail_fast_cnt >= fail_fast_limit)
       return;
@@ -1417,9 +1413,9 @@ smt_convt::resultt bmct::multi_property_check(
     std::unique_ptr<smt_convt> runtime_solver(create_solver("", ns, options));
 
     // Store solver name initially but not again
-    std::call_once(summary.solver_name_flag, [&]() {
-      summary.solver_name = runtime_solver->solver_text();
-    });
+    std::call_once(
+      summary.solver_name_flag,
+      [&]() { summary.solver_name = runtime_solver->solver_text(); });
 
     log_status(
       "Solving claim '{}' with solver {}",
@@ -1542,7 +1538,7 @@ smt_convt::resultt bmct::multi_property_check(
   };
 
   // PARALLEL
-  if (options.get_bool_option("parallel-solving"))
+  if(options.get_bool_option("parallel-solving"))
   {
     /* NOTE: I would love to use std::for_each here, but it is not giving
        * the result I would expect. My guess is either compiler version
@@ -1555,11 +1551,11 @@ smt_convt::resultt bmct::multi_property_check(
     // TODO: Running everything in parallel might be a bad idea.
     //       Should we also add a thread pool?
     std::vector<std::thread> parallel_jobs;
-    for (const auto &i : jobs)
+    for(const auto &i : jobs)
       parallel_jobs.push_back(std::thread(job_function, i));
 
     // Main driver
-    for (auto &t : parallel_jobs)
+    for(auto &t : parallel_jobs)
     {
       t.join();
     }
