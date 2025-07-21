@@ -446,7 +446,7 @@ void goto2ct::adjust_invalid_assignments(goto_programt &goto_program)
        it != goto_program.instructions.end();
        it++)
   {
-    if (it->type.load() == ASSIGN)
+    if (it->type == ASSIGN)
     {
       // Apply the recursive method first to the given ASSIGN instruction.
       adjust_invalid_assignment_rec(new_instructions, *it, ns);
@@ -456,7 +456,7 @@ void goto2ct::adjust_invalid_assignments(goto_programt &goto_program)
       goto_programt::instructiont tmp_front = new_instructions.front();
       new_instructions.pop_front();
       it->code = tmp_front.code;
-      it->type.store(tmp_front.type.load());
+      it->type = tmp_front.type;
       goto_program.instructions.splice(it, new_instructions);
     }
   }
@@ -472,7 +472,7 @@ void goto2ct::remove_unsupported_instructions(goto_programt &goto_program)
        it != goto_program.instructions.end();
        it++)
   {
-    if (it->type.load() == ASSIGN)
+    if (it->type == ASSIGN)
     {
       const code_assign2t &assign = to_code_assign2t(it->code);
       // Removing assignments to "dynamic_type2t"
