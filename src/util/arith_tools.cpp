@@ -50,7 +50,8 @@ exprt from_integer(const BigInt &int_value, const typet &type)
 
   if (type_id == "unsignedbv" || type_id == "signedbv")
   {
-    expr.value(integer2binary(int_value, bv_width(type)));
+    std::string tmp = integer2binary(int_value, bv_width(type));
+    expr.value(tmp);
     return expr;
   }
   if (type_id == "bool")
